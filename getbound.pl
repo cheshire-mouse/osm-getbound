@@ -11,13 +11,14 @@ use warnings;
 use utf8;
 use autodie;
 
-use lib 'lib';
+#use lib 'lib';
 
 use Carp;
 use Log::Any qw/$log/;
 use Log::Any::Adapter 0.11 ('Stderr');
 
 use FindBin qw{ $Bin };
+use lib "$Bin/lib";
 
 use Getopt::Long;
 use List::Util qw{ min max sum };
@@ -33,6 +34,8 @@ use App::OsmGetbound::OsmData;
 use App::OsmGetbound::OsmApiClient;
 use App::OsmGetbound::RelAlias;
 
+use Math::Clipper;
+use Math::Clipper qw{ CT_UNION PFT_NONZERO };
 
 ####    Settings
 
@@ -51,26 +54,39 @@ our %WRITER = (
 
 my $writer_name;
 GetOptions (
+    'h|help!'   => \my $show_help,
     'api=s'     => \$api_opt{api},
     'file=s'    => \my $filename,
     'o=s'       => \my $outfile,
     'onering!'  => \my $onering,
+    'clip!'     => \my $clip,
     'noinner!'  => \my $noinner,
     'proxy=s'   => \$api_opt{proxy},
     'aliases=s' => \my $alias_config,
+    'aliasesdir=s' => \my $alias_dir,
     'writer=s'  => \$writer_name,
     'om=s'      => sub { my $m = $_[1]; my $w = $WRITER{$m}; croak "Unknown mode: $m" if !$w; $writer_name = $w; },
     'offset|buffer=f' => \my $offset,
 ) or die "Invalid options";
 
-if ( !@ARGV ) {
+if ( !@ARGV or $show_help) {
     print "Usage:  getbound.pl [options] <relation> [<relation> ...]\n\n";
     print "relation - id or alias\n\n";
     print "Available options:\n";
-    print "     -api <api>      - api to use (@{[ sort keys %App::OsmGetbound::OsmApiClient::API ]})\n";
-    print "     -o <file>       - output filename (default: STDOUT)\n";
-    print "     -proxy <host>   - use proxy\n";
-    print "     -onering        - merge rings\n\n";
+    print "     -h|help            - show this message\n";
+    print "     -api <api>         - api to use (@{[ sort keys %App::OsmGetbound::OsmApiClient::API ]})\n";
+    print "     -file <file>       - use local OSM dump as input\n";
+    print "     -o <file>          - output filename (default: STDOUT)\n";
+    print "     -onering           - merge rings (connect into one line)\n";
+    print "     -clip              - clip (union) rings\n";
+    print "     -noinner           - exclude inner rings from processing\n";
+    print "     -proxy <host>      - use proxy\n";
+    print "     -aliases <file>    - file, containing aliases for relation IDs\n";
+    print "                          (default: ./etc/osm-getbound-aliases.yml)\n";
+    print "     -aliasesdir <directory>\n                        - directory, containing alias files (*.yml)\n";
+    print "     -writer <name>     - writer to use\n";
+    print "     -om <output mode>  - something to do with writer\n";
+    print "     -offset|buffer <N> - enlarge resulting area by moving bound N degrees\n\n";
     exit 1;
 }
 
@@ -84,6 +100,19 @@ my $writer = $writer_name->new();
 
 ####    Aliases
 my $alias = App::OsmGetbound::RelAlias->new($alias_config);
+
+if (defined $alias_dir){
+    $log->notice("Processing aliases directory");
+    opendir(DIR_ALIASES, $alias_dir) or die $!;
+    my @files = sort readdir(DIR_ALIASES);
+    while (my $fl_alias = shift @files ){ 
+        next if ( -d  $fl_alias);
+        next unless ( $fl_alias =~ /\.yml$/);
+        $log->notice("\t$fl_alias");
+        $alias->append("$alias_dir/$fl_alias");
+    }
+    closedir(DIR_ALIASES);
+}
 
 
 ####    Process
@@ -198,6 +227,33 @@ if ( !@contours || none { !$_->[1] } @contours ) {
 # outers first
 # todo: second sort by area
 @contours = sort { $a->[1] <=> $b->[1] || $#{$b->[0]} <=> $#{$a->[0]} } @contours;
+
+# clip contours
+if ( $clip ) {
+    $log->notice( "Clipping polygons" );
+    my @polys = map { $_->[0] } @contours;
+    my $scale = 1;
+    my @polysunpacked = ();
+    foreach my $ch (@polys) {
+    my @chunpacked = ();
+        foreach my $pnt (@$ch) {
+	    push ( @chunpacked, [ @{$pnt} ] );
+        }
+        push ( @polysunpacked, [ @chunpacked ] );
+    }
+
+    my $scales = Math::Clipper::integerize_coordinate_sets(@polysunpacked);
+    my $clipper = Math::Clipper->new();
+    $clipper->add_clip_polygons([@polysunpacked]);
+    my @polysclipped = @{ $clipper->execute(CT_UNION,PFT_NONZERO,PFT_NONZERO) } ;
+    Math::Clipper::unscale_coordinate_sets( $scales, [@polysclipped] );
+
+    @contours =
+        sort { $a->[1] <=> $b->[1] || $#{$b->[0]} <=> $#{$a->[0]} }
+        map {[ $_, Math::Polygon::Calc::polygon_is_clockwise(@$_) ]}
+        map {[@$_, $_->[0]]}
+        @polysclipped;
+}
 
 
 ##  Offset

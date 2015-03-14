@@ -94,7 +94,7 @@ sub get_object {
     my $rel_xml = $self->get_object($type => $id, 0);
     die "Failed to get $type ID=$id"  if !$rel_xml;
 
-    my $osm = App::OsmGetbound::OsmData->read_osm_xml($rel_xml);
+    my $osm = App::OsmGetbound::OsmData->parse_osm_xml($rel_xml);
     my $relation = $osm->{relations}->{$id};
     
     my @xmls = ($rel_xml);
@@ -144,7 +144,7 @@ sub _http_get {
     }
 
     if ( !$res->is_success() ) {
-        $log->warn('Download failed');
+        $log->warn("Download failed: ". ${res}->status_line());
         return;
     }
 

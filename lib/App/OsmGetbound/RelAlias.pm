@@ -70,6 +70,26 @@ sub get_id {
     return $id;
 }
 
+=method append 
+
+    $renamer->append( $alias_file );
+
+Loads one more alias file to the table
+
+=cut
+
+sub append {
+    my ($self, $filename) = @_;
+
+    my ($rename) = eval{ YAML::LoadFile $filename };
+    croak "Unable to load aliases from $filename: $@"  if !$rename;
+
+    while( ( my $k, my $v ) = each (%$rename) ) {
+        $self->{table}->{$k} = $v;
+    }
+    return $self;
+}
+
 
 =method _init (internal)
 =cut
