@@ -12,6 +12,7 @@ use utf8;
 
 use Geo::Openstreetmap::Parser;
 use Log::Any qw($log);
+use Encode qw(encode decode);
 
 
 =head1 SYNOPSIS
@@ -91,6 +92,7 @@ sub parse_osm_xml {
         },
     );
 
+    $xml = encode('utf8', $xml);
     open my $fh, '<', \$xml;
     $parser->parse($fh);
     close $fh;
