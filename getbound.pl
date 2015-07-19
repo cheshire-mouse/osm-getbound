@@ -56,6 +56,7 @@ my $writer_name;
 GetOptions (
     'h|help!'   => \my $show_help,
     'api=s'     => \$api_opt{api},
+    'singlerequest!' => \my $singlerequest,
     'file=s'    => \my $filename,
     'o=s'       => \my $outfile,
     'onering!'  => \my $onering,
@@ -75,6 +76,7 @@ if ( !@ARGV or $show_help) {
     print "Available options:\n";
     print "     -h|help            - show this message\n";
     print "     -api <api>         - api to use (@{[ sort keys %App::OsmGetbound::OsmApiClient::API ]})\n";
+    print "     -singlerequest     - download relations in a single request\n                          (overpass only)\n";
     print "     -file <file>       - use local OSM dump as input\n";
     print "     -o <file>          - output filename (default: STDOUT)\n";
     print "     -onering           - merge rings (connect into one line)\n";
@@ -139,10 +141,18 @@ if ( $filename ) {
 }
 else {
     my $api = App::OsmGetbound::OsmApiClient->new(%api_opt);
-    for my $id ( @rel_ids ) {
-        $log->notice("Downloading relation ID=$id");
-        my $xml = $api->get_object( relation => $id, 'full' );
+    if ( $singlerequest and $api_opt{api} ne 'osm' ) {
+        $log->notice("Downloading relations=@rel_ids");
+        my $xml = $api->get_object( relation => \@rel_ids, 'full' );
         $osm->load($_)  for @{ ref $xml ? $xml : [$xml] };
+    }
+    else {
+        for my $id ( @rel_ids ) {
+            $log->notice("Downloading relation ID=$id");
+            my @id_ar = ($id);
+            my $xml = $api->get_object( relation => \@id_ar, 'full' );
+            $osm->load($_)  for @{ ref $xml ? $xml : [$xml] };
+        }
     }
 }
 

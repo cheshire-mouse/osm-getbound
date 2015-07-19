@@ -81,6 +81,7 @@ Returns XML or list of XMLs.
 
 sub get_object {
     my ($self, $type, $id, $is_full) = @_;
+    my @id_ar = @$id;
 
     my $url = $self->_get_object_url( $type => $id, $is_full );
     my $xml = $self->_http_get( $url, retry => 1 );
@@ -95,15 +96,18 @@ sub get_object {
     die "Failed to get $type ID=$id"  if !$rel_xml;
 
     my $osm = App::OsmGetbound::OsmData->parse_osm_xml($rel_xml);
-    my $relation = $osm->{relations}->{$id};
-    
+
     my @xmls = ($rel_xml);
-    for my $member ( @{ $relation->{member} } ) {
-        my $part_xml = $self->get_object(
-            $member->{type} => $member->{ref},
-            ($member->{type} eq 'relation' ? 0 : 'full')
-        );
-        push @xmls, $part_xml;
+    for my $i ( @id_ar ) {
+        my $relation = $osm->{relations}->{$i};
+    
+        for my $member ( @{ $relation->{member} } ) {
+            my $part_xml = $self->get_object(
+                $member->{type} => $member->{ref},
+                ($member->{type} eq 'relation' ? 0 : 'full')
+            );
+            push @xmls, $part_xml;
+        }
     }
 
     return \@xmls;
@@ -158,15 +162,20 @@ sub _http_get {
 sub _get_object_url {
     my ($self, $obj, $id, $is_full) = @_;
     my ($api_type, $api_url) = @{$API{$self->{api}}};
+    my @id_ar = @$id;
 
     my $url;
     if ( $api_type ~~ 'osm' ) {
-        $url = "$api_url/$obj/$id";
+	die "Can't use single request mode with osm api" if ( $#id_ar > 0 );
+        $url = "$api_url/$obj/$id_ar[0]";
         $url .= '/full'  if $is_full && $obj ne 'node';
     }
     elsif ( $api_type ~~ 'overpass' ) {
-        my $query = "data=$obj($id);";
-        $query .= '(._;>);'  if $is_full;
+        my $query = "data=(";
+	for my $i ( @id_ar ) {
+	    $query .= "$obj($i);";
+        }
+        $query .= ');(._;>);'  if $is_full;
         $url = "$api_url/interpreter?${query}out meta;";
     }
     else {
