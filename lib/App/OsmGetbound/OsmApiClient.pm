@@ -124,6 +124,7 @@ sub _init_ua {
     my $ua = $self->{ua} = LWP::UserAgent->new();
     $ua->proxy( 'http', $self->{opt}->{proxy} )    if $self->{opt}->{proxy};
     $ua->default_header('Accept-Encoding' => 'gzip');
+    $ua->agent('getbound.pl');
     $ua->timeout( $self->{opt}->{http_timeout} // $HTTP_TIMEOUT );
 
     return $ua;
