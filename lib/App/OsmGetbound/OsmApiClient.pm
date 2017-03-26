@@ -166,12 +166,12 @@ sub _get_object_url {
     my @id_ar = @$id;
 
     my $url;
-    if ( $api_type ~~ 'osm' ) {
+    if ( $api_type eq 'osm' ) {
 	die "Can't use single request mode with osm api" if ( $#id_ar > 0 );
         $url = "$api_url/$obj/$id_ar[0]";
         $url .= '/full'  if $is_full && $obj ne 'node';
     }
-    elsif ( $api_type ~~ 'overpass' ) {
+    elsif ( $api_type eq 'overpass' ) {
         my $query = "data=(";
 	for my $i ( @id_ar ) {
 	    $query .= "$obj($i);";

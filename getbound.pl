@@ -109,15 +109,15 @@ my $alias = App::OsmGetbound::RelAlias->new($alias_config);
 
 if (defined $alias_dir){
     $log->notice("Processing aliases directory");
-    opendir(DIR_ALIASES, $alias_dir) or die $!;
-    my @files = sort readdir(DIR_ALIASES);
+    opendir(my $DIR_ALIASES, $alias_dir) or die $!;
+    my @files = sort readdir($DIR_ALIASES);
     while (my $fl_alias = shift @files ){ 
         next if ( -d  $fl_alias);
         next unless ( $fl_alias =~ /\.yml$/);
         $log->notice("\t$fl_alias");
         $alias->append("$alias_dir/$fl_alias");
     }
-    closedir(DIR_ALIASES);
+    closedir($DIR_ALIASES);
 }
 
 
@@ -198,7 +198,7 @@ for my $rel_id ( @rel_ids ) {
                 state $desired_order = { outer => 0, inner => 1 };
                 push @contours, [
                     $order == $desired_order->{$type} ? \@contour : [reverse @contour],
-                    $type ~~ 'inner',
+                    $type eq 'inner',
                 ];
                 next;
             }
