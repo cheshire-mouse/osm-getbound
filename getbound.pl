@@ -36,6 +36,7 @@ use App::OsmGetbound::RelAlias;
 
 use Math::Clipper;
 use Math::Clipper qw{ CT_UNION PFT_NONZERO };
+use Math::Round qw{ nearest };
 
 ####    Settings
 
@@ -265,6 +266,12 @@ if ( $clip ) {
     $clipper->add_clip_polygons([@polysunpacked]);
     my @polysclipped = @{ $clipper->execute(CT_UNION,PFT_NONZERO,PFT_NONZERO) } ;
     Math::Clipper::unscale_coordinate_sets( $scales, [@polysclipped] );
+    # workaround for int <-> float casting issues
+    for my $ring ( @polysclipped ) { 
+        for my $point ( @$ring ) { 
+            @$point = map { nearest(0.0000000001,$_) } @$point;
+        }
+    }
 
     @contours =
         sort { $a->[1] <=> $b->[1] || $#{$b->[0]} <=> $#{$a->[0]} }
