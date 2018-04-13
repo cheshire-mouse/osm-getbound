@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl
 
 # ABSTRACT: save osm boundary to .poly file
 
