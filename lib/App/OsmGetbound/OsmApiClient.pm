@@ -176,7 +176,7 @@ sub _get_object_url {
 	for my $i ( @id_ar ) {
 	    $query .= "$obj($i);";
         }
-        $query .= ');(._;>);'  if $is_full;
+        $query .= ');(._;>;);'  if $is_full;
         $url = "$api_url/interpreter?${query}out meta;";
     }
     else {
