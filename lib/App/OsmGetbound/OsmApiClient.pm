@@ -33,7 +33,9 @@ Supported $api_type are: osm, overpass.
 
 our %API = (
     osm     => [ osm => 'http://www.openstreetmap.org/api/0.6' ],
-    op_ru   => [ overpass => 'http://overpass.osm.rambler.ru/cgi' ],
+    op_ru   => [ overpass => 'http://overpass.openstreetmap.ru/cgi' ],
+    op_fr   => [ overpass => 'http://overpass.openstreetmap.fr/api' ],
+    op_kumi   => [ overpass => 'https://overpass.kumi.systems/api' ],
     op_de   => [ overpass => 'http://overpass-api.de/api' ],
 );
 
