@@ -25,5 +25,8 @@ fi-land: 2375171
 # uusimaa
 fi-raaseporin: 38102
 fi-helsingin: 38101
+fi-helsingin-1: [ 35157, 35158, 35159, 36101, 36107, 36117, 37194, 2752633, 36098, 36099, 36100, 36102, 37071 ]
+fi-helsingin-2: [ 36097, 37224, 34920, 34914 ] 
 fi-porvoon: 6394386
 fi-loviisan: 6394385
+
