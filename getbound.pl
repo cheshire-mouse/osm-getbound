@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 
 # ABSTRACT: save osm boundary to .poly file
 
@@ -46,6 +46,7 @@ my %api_opt = (
 
 our %WRITER = (
     poly => 'App::OsmGetbound::WriterPoly',
+    'poly-strict' => 'App::OsmGetbound::WriterPolyStrict',
     shp  => 'App::OsmGetbound::WriterShp',
 );
 
@@ -92,7 +93,8 @@ if ( !@ARGV or $show_help) {
     print "                          (default: ./etc/osm-getbound-aliases.yml)\n";
     print "     -aliasesdir <directory>\n                        - directory, containing alias files (*.yml)\n";
     print "     -writer <name>     - writer to use\n";
-    print "     -om <output mode>  - something to do with writer\n";
+    print "     -om <output mode>  - output mode (writer's alias):\n";
+    print "                          [poly|poly-strict|shp]\n";
     print "     -offset|buffer <N> - enlarge resulting area by moving bound N degrees\n\n";
     exit 1;
 }
