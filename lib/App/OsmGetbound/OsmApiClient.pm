@@ -32,11 +32,11 @@ Supported $api_type are: osm, overpass.
 =cut
 
 our %API = (
-    osm     => [ osm => 'http://www.openstreetmap.org/api/0.6' ],
-    op_ru   => [ overpass => 'http://overpass.openstreetmap.ru/cgi' ],
-    op_fr   => [ overpass => 'http://overpass.openstreetmap.fr/api' ],
+    osm     => [ osm => 'https://www.openstreetmap.org/api/0.6' ],
+    op_ru   => [ overpass => 'https://overpass.openstreetmap.ru/cgi' ],
+    op_fr   => [ overpass => 'https://overpass.openstreetmap.fr/api' ],
     op_kumi   => [ overpass => 'https://overpass.kumi.systems/api' ],
-    op_de   => [ overpass => 'http://overpass-api.de/api' ],
+    op_de   => [ overpass => 'https://overpass-api.de/api' ],
 );
 
 our $HTTP_TIMEOUT = 300;
