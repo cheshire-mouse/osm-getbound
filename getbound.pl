@@ -35,7 +35,7 @@ use App::OsmGetbound::OsmApiClient;
 use App::OsmGetbound::RelAlias;
 
 use Math::Clipper;
-use Math::Clipper qw{ CT_DIFFERENCE PFT_NONZERO };
+use Math::Clipper qw{ CT_UNION };
 use Math::Round qw{ nearest };
 
 ####    Settings
@@ -265,27 +265,20 @@ if ( !@contours || none { !$_->[1] } @contours ) {
 # clip contours
 if ( $clip ) {
     $log->notice( "Clipping polygons" );
-    my @polys_outer_unpacked = ();
-    my @polys_inner_unpacked = ();
+    my @polys_unpacked = ();
     for my $item ( @contours ) {
         my ($ch, $is_inner) = @$item;
         my @chunpacked = ();
         foreach my $pnt (@$ch) {
             push ( @chunpacked, [ @{$pnt} ] );
         }
-        if ($is_inner){
-            push ( @polys_inner_unpacked, [ @chunpacked ] );
-        }
-        else{
-            push ( @polys_outer_unpacked, [ @chunpacked ] );
-        }
+        push ( @polys_unpacked, [ @chunpacked ] );
     }
 
-    my $scales = Math::Clipper::integerize_coordinate_sets(@polys_outer_unpacked,@polys_inner_unpacked);
+    my $scales = Math::Clipper::integerize_coordinate_sets(@polys_unpacked);
     my $clipper = Math::Clipper->new();
-    $clipper->add_subject_polygons([@polys_outer_unpacked]);
-    $clipper->add_clip_polygons([@polys_inner_unpacked]);
-    my @polysclipped = @{ $clipper->execute(CT_DIFFERENCE,PFT_NONZERO,PFT_NONZERO) } ;
+    $clipper->add_subject_polygons([@polys_unpacked]);
+    my @polysclipped = @{ $clipper->execute(CT_UNION) } ;
     Math::Clipper::unscale_coordinate_sets( $scales, [@polysclipped] );
     # workaround for int <-> float casting issues
     for my $ring ( @polysclipped ) { 
