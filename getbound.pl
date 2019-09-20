@@ -35,7 +35,7 @@ use App::OsmGetbound::OsmApiClient;
 use App::OsmGetbound::RelAlias;
 
 use Math::Clipper;
-use Math::Clipper qw{ CT_UNION };
+use Math::Clipper qw{ CT_UNION PFT_NONZERO };
 use Math::Round qw{ nearest };
 
 ####    Settings
@@ -278,7 +278,7 @@ if ( $clip ) {
     my $scales = Math::Clipper::integerize_coordinate_sets(@polys_unpacked);
     my $clipper = Math::Clipper->new();
     $clipper->add_subject_polygons([@polys_unpacked]);
-    my @polysclipped = @{ $clipper->execute(CT_UNION) } ;
+    my @polysclipped = @{ $clipper->execute(CT_UNION,PFT_NONZERO,PFT_NONZERO) } ;
     Math::Clipper::unscale_coordinate_sets( $scales, [@polysclipped] );
     # workaround for int <-> float casting issues
     for my $ring ( @polysclipped ) { 
