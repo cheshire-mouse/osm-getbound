@@ -35,7 +35,7 @@ use App::OsmGetbound::OsmApiClient;
 use App::OsmGetbound::RelAlias;
 
 use Math::Clipper;
-use Math::Clipper qw{ CT_UNION PFT_NONZERO };
+use Math::Clipper qw{ CT_UNION CT_DIFFERENCE PFT_NONZERO };
 use Math::Round qw{ nearest };
 
 ####    Settings
@@ -184,12 +184,13 @@ else {
 # connecting rings: outers are counterclockwise!
 $log->notice( "Creating polygons" );
 
-# contours are arrays [ \@chain, $is_inner ]
+# contours are arrays [ \@chain, $is_inner, $is_hole ]
 my @contours;
 
 for my $rel_id ( @rel_ids ) {
     my $relation = $osm->{relations}->{$rel_id};
     my $is_hole = exists $rel_ids_holes{$rel_id};
+    my $invert = (not($clip) and $is_hole);
     my %ring;
 
     for my $member ( @{ $relation->{member} } ) {
@@ -214,8 +215,8 @@ for my $rel_id ( @rel_ids ) {
                 my $order = 0 + Math::Polygon::Calc::polygon_is_clockwise(@contour);
                 state $desired_order = { outer => 0, inner => 1 };
                 push @contours, [
-                    (($order == $desired_order->{$type}) xor $is_hole)? \@contour : [reverse @contour],
-                     (($type eq 'inner') xor $is_hole),
+                    (($order == $desired_order->{$type}) xor $invert)? \@contour : [reverse @contour],
+                     (($type eq 'inner') xor $invert), $is_hole
                 ];
                 next;
             }
@@ -265,20 +266,27 @@ if ( !@contours || none { !$_->[1] } @contours ) {
 # clip contours
 if ( $clip ) {
     $log->notice( "Clipping polygons" );
-    my @polys_unpacked = ();
+    my @polys_subj_unpacked = ();
+    my @polys_clip_unpacked = ();
     for my $item ( @contours ) {
-        my ($ch, $is_inner) = @$item;
+        my ($ch, $is_inner, $is_hole) = @$item;
         my @chunpacked = ();
         foreach my $pnt (@$ch) {
             push ( @chunpacked, [ @{$pnt} ] );
         }
-        push ( @polys_unpacked, [ @chunpacked ] );
+        if ( $is_hole ) {
+            push ( @polys_clip_unpacked, [ @chunpacked ] );
+        }
+        else {
+            push ( @polys_subj_unpacked, [ @chunpacked ] );
+        }
     }
 
-    my $scales = Math::Clipper::integerize_coordinate_sets(@polys_unpacked);
     my $clipper = Math::Clipper->new();
-    $clipper->add_subject_polygons([@polys_unpacked]);
-    my @polysclipped = @{ $clipper->execute(CT_UNION,PFT_NONZERO,PFT_NONZERO) } ;
+    my $scales = Math::Clipper::integerize_coordinate_sets(@polys_subj_unpacked,@polys_clip_unpacked);
+    $clipper->add_subject_polygons([@polys_subj_unpacked]);
+    $clipper->add_clip_polygons([@polys_clip_unpacked]);
+    my @polysclipped = @{ $clipper->execute(CT_DIFFERENCE,PFT_NONZERO,PFT_NONZERO) } ;
     Math::Clipper::unscale_coordinate_sets( $scales, [@polysclipped] );
     # workaround for int <-> float casting issues
     for my $ring ( @polysclipped ) { 
